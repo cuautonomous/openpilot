@@ -22,7 +22,7 @@ class LatControl(object):
     self.pid.reset()
 
   def update(self, active, v_ego, angle_steers, steer_override, CP, VM, path_plan):
-    if v_ego < 0.3 or not active:
+    if not active:
       output_steer = 0.0
       self.pid.reset()
     else:
@@ -31,6 +31,8 @@ class LatControl(object):
       #dt = min(cur_time - self.angle_steers_des_time, _DT_MPC + _DT) + _DT  # no greater than dt mpc + dt, to prevent too high extraps
       #self.angle_steers_des = self.angle_steers_des_prev + (dt / _DT_MPC) * (self.angle_steers_des_mpc - self.angle_steers_des_prev)
       self.angle_steers_des = path_plan.angleSteers  # get from MPC/PathPlanner
+
+      v_ego = 1.4 #fast steering
 
       steers_max = get_steer_max(CP, v_ego)
       self.pid.pos_limit = steers_max

@@ -68,6 +68,8 @@ def data_sample(CI, CC, plan_sock, path_plan_sock, thermal, calibration, health,
       plan = messaging.recv_one(socket)
     elif socket is path_plan_sock:
       path_plan = messaging.recv_one(socket)
+    elif socket is gabriel_sock:
+        gabriel = messaging.recv_one(socket)
 
   if td is not None:
     overtemp = td.thermal.thermalStatus >= ThermalStatus.red
@@ -256,6 +258,9 @@ def state_control(plan, path_plan, CS, CP, state, events, v_cruise_kph, v_cruise
   # Gas/Brake PID loop
   actuators.gas, actuators.brake = LoC.update(active, CS.vEgo, CS.brakePressed, CS.standstill, CS.cruiseState.standstill,
                                               v_cruise_kph, v_acc_sol, plan.vTargetFuture, a_acc_sol, CP)
+  # Pass in custom steering -- we overwrite originally received plan 
+  path_plan.angleSteers = gabriel.degrees
+
   # Steering PID loop and lateral MPC
   actuators.steer, actuators.steerAngle = LaC.update(active, CS.vEgo, CS.steeringAngle,
                                                      CS.steeringPressed, CP, VM, path_plan)
@@ -415,6 +420,7 @@ def controlsd_thread(gctx=None, rate=100):
   plan_sock = messaging.sub_sock(context, service_list['plan'].port, conflate=True, poller=poller)
   path_plan_sock = messaging.sub_sock(context, service_list['pathPlan'].port, conflate=True, poller=poller)
   logcan = messaging.sub_sock(context, service_list['can'].port)
+  gabriel_sock = messaging.sub_sock(context, service_list['gabriel'].port, conflate=True, poller=poller)
 
   CC = car.CarControl.new_message()
   CI, CP = get_car(logcan, sendcan, 1.0 if passive else None)

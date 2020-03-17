@@ -4,6 +4,9 @@
 
 # all ZMQ pub sub:
 
+# custom steering for Carleton University
+gabriel: [7990, true]
+
 # frame syncing packet
 frame: [8002, true]
 # accel, gyro, and compass
