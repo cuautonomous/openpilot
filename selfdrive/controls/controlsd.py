@@ -39,7 +39,7 @@ def isEnabled(state):
   return (isActive(state) or state == State.preEnabled)
 
 
-def data_sample(CI, CC, plan_sock, path_plan_sock, thermal, calibration, health, driver_monitor,
+def data_sample(CI, CC, plan_sock, path_plan_sock, gabriel_sock, thermal, calibration, health, driver_monitor,
                 poller, cal_status, cal_perc, overtemp, free_space, low_battery,
                 driver_status, state, mismatch_counter, params, plan, path_plan):
   """Receive data from sockets and create events for battery, temperature and disk space"""
@@ -113,7 +113,7 @@ def data_sample(CI, CC, plan_sock, path_plan_sock, thermal, calibration, health,
   if dm is not None:
     driver_status.get_pose(dm.driverMonitoring, params)
 
-  return CS, events, cal_status, cal_perc, overtemp, free_space, low_battery, mismatch_counter, plan, path_plan
+  return CS, events, cal_status, cal_perc, overtemp, free_space, low_battery, mismatch_counter, plan, path_plan, gabriel
 
 
 def state_transition(CS, CP, state, events, soft_disable_timer, v_cruise_kph, AM):
@@ -259,7 +259,7 @@ def state_control(plan, path_plan, CS, CP, state, events, v_cruise_kph, v_cruise
   actuators.gas, actuators.brake = LoC.update(active, CS.vEgo, CS.brakePressed, CS.standstill, CS.cruiseState.standstill,
                                               v_cruise_kph, v_acc_sol, plan.vTargetFuture, a_acc_sol, CP)
   # Pass in custom steering -- we overwrite originally received plan 
-  path_plan.angleSteers = gabriel.degrees
+  path_plan.angleSteers = gabriel.angleSteers
 
   # Steering PID loop and lateral MPC
   actuators.steer, actuators.steerAngle = LaC.update(active, CS.vEgo, CS.steeringAngle,
@@ -420,7 +420,7 @@ def controlsd_thread(gctx=None, rate=100):
   plan_sock = messaging.sub_sock(context, service_list['plan'].port, conflate=True, poller=poller)
   path_plan_sock = messaging.sub_sock(context, service_list['pathPlan'].port, conflate=True, poller=poller)
   logcan = messaging.sub_sock(context, service_list['can'].port)
-  gabriel_sock = messaging.sub_sock(context, service_list['gabriel'].port, conflate=True, poller=poller)
+  gabriel_sock = messaging.sub_sock(context, service_list['gabriel'].port, conflate=True, poller=poller, addr='192.168.5.2') #laptop ip address
 
   CC = car.CarControl.new_message()
   CI, CP = get_car(logcan, sendcan, 1.0 if passive else None)
@@ -464,6 +464,8 @@ def controlsd_thread(gctx=None, rate=100):
   plan.init('plan')
   path_plan = messaging.new_message()
   path_plan.init('pathPlan')
+  gabriel = messaging.new_message()
+  gabriel.init('pathPlan')
 
   rk = Ratekeeper(rate, print_delay_threshold=2. / 1000)
   controls_params = params.get("ControlsParams")
@@ -481,10 +483,10 @@ def controlsd_thread(gctx=None, rate=100):
     prof.checkpoint("Ratekeeper", ignore=True)
 
     # Sample data and compute car events
-    CS, events, cal_status, cal_perc, overtemp, free_space, low_battery, mismatch_counter, plan, path_plan  =\
+    CS, events, cal_status, cal_perc, overtemp, free_space, low_battery, mismatch_counter, plan, path_plan, gabriel  =\
       data_sample(CI, CC, plan_sock, path_plan_sock, thermal, cal, health, driver_monitor,
                   poller, cal_status, cal_perc, overtemp, free_space, low_battery, driver_status,
-                  state, mismatch_counter, params, plan, path_plan)
+                  state, mismatch_counter, params, plan, path_plan, gabriel)
     prof.checkpoint("Sample")
 
     path_plan_age = (start_time - path_plan.logMonoTime) / 1e9

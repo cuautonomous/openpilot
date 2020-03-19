@@ -1,3 +1,4 @@
+#script meant to run on Parralax computer to talk to openpilot 
 import zmq
 import selfdrive.messaging as messaging
 from selfdrive.services import service_list
@@ -14,7 +15,7 @@ def hacker_thread(gctx=None, rate=25):
   while True:
     plan_send = messaging.new_message()
     plan_send.init('pathPlan')
-    plan_send.pathPlan.angleSteers = 21 #for example
+    plan_send.pathPlan.angleSteers = 21 #real value can be retrieved from Parralax
     gabriel.send(plan_send.to_bytes())
 
     rk.keep_time()  # Run at 25Hz

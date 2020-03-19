@@ -32,7 +32,7 @@ class LatControl(object):
       #self.angle_steers_des = self.angle_steers_des_prev + (dt / _DT_MPC) * (self.angle_steers_des_mpc - self.angle_steers_des_prev)
       self.angle_steers_des = path_plan.angleSteers  # get from MPC/PathPlanner
 
-      v_ego = 1.4 #fast steering
+      v_ego = 1.4 #Carleton steering at 0 km/h hack
 
       steers_max = get_steer_max(CP, v_ego)
       self.pid.pos_limit = steers_max
@@ -40,9 +40,8 @@ class LatControl(object):
       steer_feedforward = self.angle_steers_des   # feedforward desired angle
       if CP.steerControlType == car.CarParams.SteerControlType.torque:
         steer_feedforward *= v_ego**2  # proportional to realigning tire momentum (~ lateral accel)
-      deadzone = 0.0
       output_steer = self.pid.update(self.angle_steers_des, angle_steers, check_saturation=(v_ego > 10), override=steer_override,
-                                     feedforward=steer_feedforward, speed=v_ego, deadzone=deadzone)
+                                     feedforward=steer_feedforward, speed=v_ego)
 
     self.sat_flag = self.pid.saturated
     return output_steer, float(self.angle_steers_des)
